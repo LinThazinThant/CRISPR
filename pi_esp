@@ -21,7 +21,7 @@ const int pwmTable[4] = {
 
 /* ---------- SET OUTPUT ---------- */
 void setOutput(int value) {
-  analogWrite(dimPin, value);   // 👈 no ledc
+  analogWrite(dimPin, value);   
   Serial.print("PWM set to: ");
   Serial.println(value);
 }
@@ -50,7 +50,7 @@ void handleControl() {
   }
 
   if (pwmValue == 0) {
-  digitalWrite(dimPin, LOW);   // FORCE OFF ✅
+  digitalWrite(dimPin, LOW);   // FORCE OFF 
 } else {
   analogWrite(dimPin, pwmValue);
 }
