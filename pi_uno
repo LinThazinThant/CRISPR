@@ -1,0 +1,144 @@
+#include <OneWire.h>
+#include <DallasTemperature.h>
+#include <PID_v1.h>
+
+/* ---------- PINS ---------- */
+const int PIN_TEMP = 2;
+const int PIN_PWM  = 6;
+
+/* ---------- TEMP SENSOR ---------- */
+OneWire oneWire(PIN_TEMP);
+DallasTemperature sensors(&oneWire);
+
+/* ---------- PID ---------- */
+double Setpoint = 39.0;
+double Input = 0.0;
+double Output = 0.0;
+
+double Kp = 25.0;
+double Ki = 2.0;
+double Kd = 40.0;
+
+PID myPID(&Input, &Output, &Setpoint, Kp, Ki, Kd, DIRECT);
+
+/* ---------- TIMING ---------- */
+unsigned long lastControl = 0;
+unsigned long lastPrint   = 0;
+
+const unsigned long controlInterval = 150;
+const unsigned long printInterval   = 500;
+
+/* ---------- POWER ---------- */
+const int FULL_POWER = 255;
+const int LOW_POWER  = 80;
+
+const double BOOST_THRESHOLD = 3.0;
+const double SOFT_LOW  = 38.5;
+const double SOFT_HIGH = 39.0;
+
+/* ---------- CONTROL FLAG ---------- */
+bool heaterEnabled = false;
+
+/* ---------- SERIAL BUFFER ---------- */
+String inputBuffer = "";
+
+/* ---------- SETUP ---------- */
+void setup() {
+  Serial.begin(115200);
+
+  sensors.begin();
+  pinMode(PIN_PWM, OUTPUT);
+  analogWrite(PIN_PWM, 0);
+
+  myPID.SetMode(AUTOMATIC);
+  myPID.SetOutputLimits(0, FULL_POWER);
+  myPID.SetSampleTime(controlInterval);
+
+  Serial.println("READY");
+}
+
+/* ---------- NON-BLOCKING SERIAL ---------- */
+void readSerial() {
+  while (Serial.available()) {
+    char c = Serial.read();
+
+    if (c == '\n') {
+      processCommand(inputBuffer);
+      inputBuffer = "";
+    } else {
+      inputBuffer += c;
+    }
+  }
+}
+
+void processCommand(String cmd) {
+  cmd.trim();
+
+  if (cmd == "HEATER_ON") {
+    heaterEnabled = true;
+  }
+  else if (cmd == "HEATER_OFF") {
+    heaterEnabled = false;
+    analogWrite(PIN_PWM, 0);
+  }
+  else if (cmd.startsWith("SET_TEMP:")) {
+    Setpoint = cmd.substring(9).toFloat();
+  }
+}
+
+/* ---------- LOOP ---------- */
+void loop() {
+
+  readSerial();
+
+  unsigned long now = millis();
+
+  /* ----- CONTROL LOOP ----- */
+  if (now - lastControl >= controlInterval) {
+    lastControl = now;
+
+    sensors.requestTemperatures();
+    Input = sensors.getTempCByIndex(0);
+
+    if (Input == DEVICE_DISCONNECTED_C) {
+      Serial.println("ERROR:SENSOR");
+      analogWrite(PIN_PWM, 0);
+      return;
+    }
+
+    int pwmOut = 0;
+
+    if (!heaterEnabled || Input > 42.0) {
+      pwmOut = 0;
+    }
+    else if (Input < Setpoint - BOOST_THRESHOLD) {
+      pwmOut = FULL_POWER;
+    }
+    else if (Input < SOFT_LOW) {
+      myPID.Compute();
+      pwmOut = (int)Output;
+    }
+    else if (Input < SOFT_HIGH) {
+      pwmOut = LOW_POWER;
+    }
+    else {
+      pwmOut = 0;
+    }
+
+    pwmOut = constrain(pwmOut, 0, FULL_POWER);
+    analogWrite(PIN_PWM, pwmOut);
+  }
+
+  /* ----- SEND CLEAN DATA ----- */
+  if (now - lastPrint >= printInterval) {
+    lastPrint = now;
+
+    Serial.print("TEMP:");
+    Serial.print(Input, 2);
+    Serial.print(",HEATER:");
+    Serial.print(heaterEnabled);
+    Serial.print(",SET:");
+    Serial.print(Setpoint);
+    Serial.println();
+  }
+}
