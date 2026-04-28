@@ -1,0 +1,92 @@
+#include <WiFi.h>
+#include <WebServer.h>
+
+/* ---------- WIFI ---------- */
+const char* ssid = "Hui";
+const char* password = "hui123456";
+
+/* ---------- SERVER ---------- */
+WebServer server(80);
+
+/* ---------- PIN ---------- */
+const int dimPin = 14;
+
+/* ---------- PWM TABLE (0–255) ---------- */
+const int pwmTable[4] = {
+  0,    // OFF
+  80,   // LOW
+  150,  // MEDIUM
+  220   // HIGH
+};
+
+/* ---------- SET OUTPUT ---------- */
+void setOutput(int value) {
+  analogWrite(dimPin, value);   // 👈 no ledc
+  Serial.print("PWM set to: ");
+  Serial.println(value);
+}
+
+/* ---------- HANDLER ---------- */
+void handleControl() {
+  String state = server.arg("state");
+  String level = server.arg("level");
+
+  Serial.print("STATE: ");
+  Serial.println(state);
+  Serial.print("LEVEL: ");
+  Serial.println(level);
+
+  int pwmValue = 0;
+
+  // FORCE OFF if state=off
+  if (state == "off") {
+    pwmValue = 0;
+  }
+  else if (state == "on") {
+    if (level == "low") pwmValue = 80;
+    else if (level == "medium") pwmValue = 150;
+    else if (level == "high") pwmValue = 220;
+    else pwmValue = 80; // default
+  }
+
+  if (pwmValue == 0) {
+  digitalWrite(dimPin, LOW);   // FORCE OFF ✅
+} else {
+  analogWrite(dimPin, pwmValue);
+}
+
+  Serial.print("PWM: ");
+  Serial.println(pwmValue);
+
+  server.send(200, "text/plain", "OK");
+}
+
+/* ---------- SETUP ---------- */
+void setup() {
+  Serial.begin(115200);
+
+  pinMode(dimPin, OUTPUT);
+digitalWrite(dimPin, LOW);   // start OFF
+
+  WiFi.begin(ssid, password);
+
+  Serial.print("Connecting to WiFi");
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+
+  Serial.println("\nConnected!");
+  Serial.print("ESP32 IP: ");
+  Serial.println(WiFi.localIP());
+
+  server.on("/", handleControl);
+  server.begin();
+
+  Serial.println("Server started");
+}
+
+/* ---------- LOOP ---------- */
+void loop() {
+  server.handleClient();
+}
