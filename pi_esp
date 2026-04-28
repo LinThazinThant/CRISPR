@@ -2,8 +2,8 @@
 #include <WebServer.h>
 
 /* ---------- WIFI ---------- */
-const char* ssid = "Hui";
-const char* password = "hui123456";
+const char* ssid = "xxx";
+const char* password = "xxxxx";
 
 /* ---------- SERVER ---------- */
 WebServer server(80);
