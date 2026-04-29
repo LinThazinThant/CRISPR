@@ -1,92 +1,177 @@
-#include <WiFi.h>
-#include <WebServer.h>
+# -*- coding: utf-8 -*-
 
-/* ---------- WIFI ---------- */
-const char* ssid = "xxx";
-const char* password = "xxxxx";
+import serial
+import threading
+import requests
+from flask import Flask, jsonify
+import tkinter as tk
 
-/* ---------- SERVER ---------- */
-WebServer server(80);
+# ---------- CONFIG ----------
+SERIAL_PORT = '/dev/ttyACM0'
+BAUD = 115200
+ESP32_IP = "xxx.xxx.x.xx"   # ← change to your ESP32 IP
 
-/* ---------- PIN ---------- */
-const int dimPin = 14;
+# ---------- SERIAL ----------
+try:
+    ser = serial.Serial(SERIAL_PORT, BAUD, timeout=1)
+    print("Serial connected")
+except:
+    print("ERROR: Cannot open serial port")
+    ser = None
 
-/* ---------- PWM TABLE (0–255) ---------- */
-const int pwmTable[4] = {
-  0,    // OFF
-  80,   // LOW
-  150,  // MEDIUM
-  220   // HIGH
-};
-
-/* ---------- SET OUTPUT ---------- */
-void setOutput(int value) {
-  analogWrite(dimPin, value);   
-  Serial.print("PWM set to: ");
-  Serial.println(value);
+# ---------- GLOBAL DATA ----------
+data = {
+    "temp": "--",
+    "heater": 0
 }
 
-/* ---------- HANDLER ---------- */
-void handleControl() {
-  String state = server.arg("state");
-  String level = server.arg("level");
+# ---------- SERIAL READ ----------
+def read_serial():
+    while True:
+        try:
+            if ser:
+                line = ser.readline().decode(errors='ignore').strip()
 
-  Serial.print("STATE: ");
-  Serial.println(state);
-  Serial.print("LEVEL: ");
-  Serial.println(level);
+                if line:
+                    print("UNO:", line)
 
-  int pwmValue = 0;
+                # Expect: TEMP:36.5
+                if line.startswith("TEMP:"):
+                    data["temp"] = line.split(":")[1]
 
-  // FORCE OFF if state=off
-  if (state == "off") {
-    pwmValue = 0;
-  }
-  else if (state == "on") {
-    if (level == "low") pwmValue = 80;
-    else if (level == "medium") pwmValue = 150;
-    else if (level == "high") pwmValue = 220;
-    else pwmValue = 80; // default
-  }
+        except:
+            pass
 
-  if (pwmValue == 0) {
-  digitalWrite(dimPin, LOW);   // FORCE OFF ✅
-} else {
-  analogWrite(dimPin, pwmValue);
-}
+# ---------- SEND TO UNO ----------
+def send_to_uno(cmd):
+    try:
+        if ser:
+            print("SEND UNO:", cmd)
+            ser.write((cmd + "\n").encode())
+    except:
+        print("Serial error")
 
-  Serial.print("PWM: ");
-  Serial.println(pwmValue);
+# ---------- ESP32 CONTROL ----------
+def led_on(level):
+    try:
+        print("LED:", level)
+        requests.get(f"http://{ESP32_IP}/?state=on&level={level}", timeout=2)
+    except:
+        print("ESP32 error")
 
-  server.send(200, "text/plain", "OK");
-}
+def led_off():
+    try:
+        print("LED: off")
+        requests.get(f"http://{ESP32_IP}/?state=off", timeout=2)
+    except:
+        print("ESP32 error")
 
-/* ---------- SETUP ---------- */
-void setup() {
-  Serial.begin(115200);
+# ==============================
+# 🌐 FLASK WEB
+# ==============================
 
-  pinMode(dimPin, OUTPUT);
-digitalWrite(dimPin, LOW);   // start OFF
+app = Flask(__name__)
 
-  WiFi.begin(ssid, password);
+@app.route("/")
+def home():
+    return f"""
+    <h1>Control Panel</h1>
+    <p>Temperature: {data['temp']} C</p>
 
-  Serial.print("Connecting to WiFi");
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.print(".");
-  }
+    <h3>Heater</h3>
+    <a href="/heater/on">ON</a><br>
+    <a href="/heater/off">OFF</a><br><br>
 
-  Serial.println("\nConnected!");
-  Serial.print("ESP32 IP: ");
-  Serial.println(WiFi.localIP());
+    <h3>LED</h3>
+    <a href="/led/low">LOW</a><br>
+    <a href="/led/medium">MEDIUM</a><br>
+    <a href="/led/high">HIGH</a><br>
+    <a href="/led/off">OFF</a>
+    """
 
-  server.on("/", handleControl);
-  server.begin();
+@app.route("/heater/<state>")
+def heater(state):
+    if state == "on":
+        send_to_uno("HEATER_ON")
+        data["heater"] = 1
+    else:
+        send_to_uno("HEATER_OFF")
+        data["heater"] = 0
+    return "OK"
 
-  Serial.println("Server started");
-}
+@app.route("/led/<level>")
+def led(level):
+    if level == "off":
+        led_off()
+    else:
+        led_on(level)
+    return "OK"
 
-/* ---------- LOOP ---------- */
-void loop() {
-  server.handleClient();
-}
+@app.route("/data")
+def get_data():
+    return jsonify(data)
+
+def run_flask():
+    app.run(host='0.0.0.0', port=5000)
+
+# ==============================
+# 🖥 TKINTER GUI
+# ==============================
+
+def run_gui():
+    root = tk.Tk()
+    root.title("Control Panel")
+
+    temp_label = tk.Label(root, text="Temp: -- C", font=("Arial", 16))
+    temp_label.pack(pady=10)
+
+    heater_label = tk.Label(root, text="Heater: OFF", font=("Arial", 14))
+    heater_label.pack(pady=5)
+
+    def update():
+        temp_label.config(text=f"Temp: {data['temp']} C")
+
+        if data["heater"] == 1:
+            heater_label.config(text="Heater: ON")
+        else:
+            heater_label.config(text="Heater: OFF")
+
+        root.after(1000, update)
+
+    # Heater buttons
+    tk.Button(root, text="Heater ON",
+              command=lambda: send_to_uno("HEATER_ON"),
+              width=20).pack(pady=5)
+
+    tk.Button(root, text="Heater OFF",
+              command=lambda: send_to_uno("HEATER_OFF"),
+              width=20).pack(pady=5)
+
+    # LED buttons
+    tk.Button(root, text="LED LOW",
+              command=lambda: led_on("low"),
+              width=20).pack(pady=5)
+
+    tk.Button(root, text="LED MEDIUM",
+              command=lambda: led_on("medium"),
+              width=20).pack(pady=5)
+
+    tk.Button(root, text="LED HIGH",
+              command=lambda: led_on("high"),
+              width=20).pack(pady=5)
+
+    tk.Button(root, text="LED OFF",
+              command=led_off,
+              width=20).pack(pady=5)
+
+    update()
+    root.mainloop()
+
+# ==============================
+# 🚀 MAIN
+# ==============================
+
+threading.Thread(target=read_serial, daemon=True).start()
+threading.Thread(target=run_flask, daemon=True).start()
+
+run_gui()
