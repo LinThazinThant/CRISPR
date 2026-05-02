@@ -15,5 +15,6 @@ The system integrates:
 
 # System Architecture
 * **Communication Structure**
-  
+  <img width="1032" height="540" alt="image" src="https://github.com/user-attachments/assets/300238db-6551-4fff-9156-5d1f6784fd51" />
+
 * **
