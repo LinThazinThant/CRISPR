@@ -41,4 +41,38 @@ The system integrates:
 
 # Working Principle
 * **Temperature Control (UNO)**
+  * Reads temperature using **DS18B20**
+  * Uses **PID control** to maintain 39°C
+  * Adaptive heating:
+    * Full power when far from setpoint
+    * PID near target
+    * Soft control near stability
+* **LED Control (ESP32)**
+  * Hosts a **web server**
+  * Receives HTTP commands:
+    * LOW
+    * MEDIUM
+    * HIGH
+    * OFF
+  * Adjusts PWM output accordingly
+* **Central Control (Raspberry Pi)**
+  * Reads temperature from UNO via serial
+  * Sends heater commands (HEATER_ON, HEATER_OFF)
+  * Sends LED commands via HTTP requests
+  * Provides:
+    * Web interface
+    * GUI interface
+* **Web API Endpoints**
+  
+* **Graphical User Interface**
+  Features:
+  * Real-time temperature display
+  * Heater ON/OFF control
+  * LED intensity buttons
+  * Simple and responsive interface
+**Example Outpu**
+
+# Installation & Setup
+* **1. Upload Firmware**
+ * Upload ESP32 code: 
 * 
