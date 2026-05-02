@@ -21,3 +21,24 @@ The system integrates:
   * Arduino UNO --> Temperature sensing + PID heater control
   * ESP 32 --> LED intensity control via web server
   * Raspberry Pi --> Central control
+
+# Hardware Components
+* **Controller Units**
+  * Raspberry Pi
+  * Arduino UNO
+  * ESP32
+* **Sensors**
+  * DS18B20 Temperature Sensor
+  *  Heating Element
+  *  High-power green LED
+  *  LED Driver
+
+# Software Stack
+* Arduino IDE
+* HTTP Communication (ESP32)
+* Serial Communication (UNO)
+* Python (Raspberry Pi)
+
+# Working Principle
+* **Temperature Control (UNO)**
+* 
