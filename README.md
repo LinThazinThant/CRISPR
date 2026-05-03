@@ -71,6 +71,7 @@ The system integrates:
   * Heater ON/OFF control
   * LED intensity buttons
   * Simple and responsive interface
+
 **Example Output**
 <img width="400" height="166" alt="image" src="https://github.com/user-attachments/assets/448701e6-66c0-4745-ae75-aa4a25b24296" />
 
