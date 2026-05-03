@@ -76,5 +76,8 @@ The system integrates:
 
 # Installation & Setup
 * **1. Upload Firmware**
- * Upload ESP32 code: 
+ * Upload ESP32 code: pi_esp
+ * Upload Arduino Uno code: pi_uno
+* **2. Configure Raspberry Pi**
+  * Install dependencies
 * 
