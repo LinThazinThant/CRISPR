@@ -63,14 +63,16 @@ The system integrates:
     * Web interface
     * GUI interface
 * **Web API Endpoints**
-  
+  <img width="964" height="310" alt="image" src="https://github.com/user-attachments/assets/873aff1e-bda8-405b-a691-1b84557a717e" />
+
 * **Graphical User Interface**
   Features:
   * Real-time temperature display
   * Heater ON/OFF control
   * LED intensity buttons
   * Simple and responsive interface
-**Example Outpu**
+**Example Output**
+<img width="400" height="166" alt="image" src="https://github.com/user-attachments/assets/448701e6-66c0-4745-ae75-aa4a25b24296" />
 
 # Installation & Setup
 * **1. Upload Firmware**
