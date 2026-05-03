@@ -81,4 +81,16 @@ The system integrates:
  * Upload Arduino Uno code: pi_uno
 * **2. Configure Raspberry Pi**
   * Install dependencies
-* 
+* **3. Run System**
+  python system.py
+* **4. Access Interface**
+  * Web Interface: http://<raspberry_pi_ip>:5000
+  * GUI: Launches automatically uopn execution
+
+# Demo
+https://youtube.com/playlist?list=PLuUZ1e_mBwtsVDr8vvTPHeY78rKGG31Nr&si=S5yVr-j-nnQMRTTC
+
+By 
+Hein Kyaw Nyein (66010995)
+Lin Thazin Thant (66011057)
+Advisor: Pimkhuan Hannanra-anan
